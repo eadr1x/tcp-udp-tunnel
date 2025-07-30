@@ -2,7 +2,7 @@ import socket
 import threading
 
 server_ip = '127.0.0.1'
-server_port = 8888
+server_port = 25565
 
 connected = False
 
@@ -11,7 +11,13 @@ def handle_server_packets(udp_sock):
     global connected
     while True:
         if connected:
-            data = tcp_sock.recv(4096)
+            data = b''
+            try:
+                data = tcp_sock.recv(65507)
+            except ConnectionAbortedError:
+                pass
+            except OSError:
+                pass
             if not data:
                 tcp_sock.close()
                 tcp_sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -21,7 +27,7 @@ def handle_server_packets(udp_sock):
                 connected = False
             else:
                 udp_sock.sendto(b'\x01' + data, ('127.0.0.1',5001))
-                print('server data transfer')
+                print(f'server data transfer {len(data)}B')
 
 def main():
     global connected
@@ -39,22 +45,22 @@ def main():
     handler.start()
 
     while True:
-        data = udp_sock.recv(4096)
+        data = udp_sock.recv(65507)
         if data[0] == 1:
             tcp_sock.send(data[1:])
-            print('data transfer')
+            print(f'data transfer {len(data)}B')
         elif data[0] == 0:
             if data[1] == 0:
                 tcp_sock.connect((server_ip,server_port))
                 connected = True
-                print('connected')
+                #print('connected')
             elif data[1] == 1:
                 tcp_sock.close()
                 tcp_sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
                 tcp_sock.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
                 tcp_sock.bind(('0.0.0.0',5555))
                 connected = False
-                print('disconnected')
+                #print('disconnected')
 
 
 if __name__ == "__main__":

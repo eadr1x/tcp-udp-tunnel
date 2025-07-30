@@ -1,5 +1,6 @@
 import socket
 import threading
+import time
 
 client_ip = '0.0.0.0'
 client_port = 5555
@@ -10,15 +11,14 @@ def handle_server_packets(udp_sock):
     global connected
     global client
     while True:
-        data = udp_sock.recv(4096)
-        print(data)
+        data = udp_sock.recv(65507)
         if data[0] == 1:
             client.send(data[1:])
-            print('server data transfer')
+            print(f'server data transfer, {len(data)-1}B')
         elif data[0:2] == b'\x00\x01':
             client.close()
             connected = False
-            print('disconnected')
+            #print('disconnected')
 
 def main():
     global connected
@@ -40,7 +40,7 @@ def main():
         client, addr = tcp_sock.accept()
         udp_sock.sendto(b'\x00\x00',('127.0.0.1',5000)) #handle connection
         connected = True
-        print('connected')
+        #print('connected')
         while True:
             if not connected:
                 break
@@ -48,22 +48,22 @@ def main():
             data = b''
             client.setblocking(False)
             while do:
-                if client.fileno() == -1:
-                    break
                 try:
-                    data = client.recv(4096)
+                    data = client.recv(65507)
                     do = False
                 except BlockingIOError:
                     pass
+                except OSError:
+                    do = False
             if client.fileno() != -1: 
                 client.setblocking(True)
             if not data:
                 udp_sock.sendto(b'\x00\x01',('127.0.0.1',5000)) #handle disconnection
                 client.close()
                 connected = False
-                print('disconnected')
+                #print('disconnected')
                 break
-            print('data transfer')
+            print(f'data transfer {len(data)}B')
             udp_sock.sendto(b'\x01'+data,('127.0.0.1',5000)) #handle data
 
 if __name__ == "__main__":
