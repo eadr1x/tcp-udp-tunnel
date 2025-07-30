@@ -1,6 +1,5 @@
 import socket
 import threading
-import time
 
 client_ip = '0.0.0.0'
 client_port = 5555
